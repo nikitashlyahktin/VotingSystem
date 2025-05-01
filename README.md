@@ -1,100 +1,139 @@
-# SQR Project Voting System
+# Voting System
 
-A secure and scalable voting system built with FastAPI and Streamlit.
+A full-stack web application for creating and managing polls, built with FastAPI (backend) and Streamlit (frontend).
 
 ## Features
 
-- User registration and authentication with JWT tokens
-- Create polls with single or multiple choice options
-- Set automatic closing dates for polls
-- Vote in active polls
-- View poll results in real-time
-- Modern and responsive UI with Streamlit
-- Secure password hashing with bcrypt
-- SQLite database for data persistence
+- User Authentication
+  - Registration with email and username
+  - Login with email and password
+  - JWT-based authentication
+  - Protected routes
 
-## Requirements
+- Poll Management
+  - Create polls with multiple options
+  - Set poll closing dates
+  - Allow single or multiple choice voting
+  - View poll results with vote counts and percentages
+  - Close polls manually
 
-- Python 3.11 or higher
+- Voting System
+  - Vote on active polls
+  - Change votes before poll closes
+  - View real-time results
+  - Visual representation of voting percentages
+
+## Tech Stack
+
+### Backend
+- FastAPI
+- SQLAlchemy
+- SQLite
 - Poetry for dependency management
+- JWT for authentication
 
-## Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/voting-system.git
-cd voting-system
-```
-
-2. Install dependencies using Poetry:
-```bash
-poetry install
-```
-
-## Running the Application
-
-1. Start the FastAPI backend:
-```bash
-cd backend
-poetry run uvicorn app.main:app --reload
-```
-
-The API will be available at http://localhost:8000
-API documentation is available at http://localhost:8000/docs
-
-2. Start the Streamlit frontend (in a new terminal):
-```bash
-cd frontend
-poetry run streamlit run app.py
-```
-
-The frontend will be available at http://localhost:8501
+### Frontend
+- Streamlit
+- Requests for API communication
 
 ## Project Structure
 
 ```
-voting-system/
+VotingSystem/
 ├── backend/
 │   ├── app/
 │   │   ├── application/
-│   │   │   └── routers/
+│   │   │   ├── dtos/
+│   │   │   ├── routers/
+│   │   │   └── use_cases/
 │   │   ├── domain/
-│   │   │   └── schemas.py
 │   │   ├── infrastructure/
 │   │   │   ├── database/
 │   │   │   └── security/
 │   │   └── main.py
-│   └── tests/
+│   ├── run.py
+│   └── test_server.py
 ├── frontend/
 │   └── app.py
 ├── poetry.lock
-└── pyproject.toml
+├── pyproject.toml
+└── README.md
 ```
 
-## Testing
+## Getting Started
 
-Run the test suite:
+### Prerequisites
+- Python 3.10+
+- Poetry
+
+### Installation
+
+1. Clone the repository:
 ```bash
-poetry run pytest
+git clone git@github.com:nikitashlyahktin/VotingSystem.git
+cd VotingSystem
 ```
 
-## Security Features
+2. Install dependencies:
+```bash
+poetry install
+```
 
-- Password hashing using bcrypt
-- JWT token-based authentication
-- SQL injection protection with SQLAlchemy
-- XSS protection
-- Input validation with Pydantic
-- CORS configuration
-- Rate limiting
+3. Start the backend server:
+```bash
+cd backend
+poetry run python run.py
+```
+
+4. Start the frontend server:
+```bash
+cd frontend
+poetry run python app.py
+```
+
+5. Access the application:
+- Frontend: http://localhost:8501
+- API Documentation: http://localhost:8000/docs
+
+## API Endpoints
+
+### Authentication
+- `POST /auth/register` - Register a new user
+- `POST /auth/login` - Login and get access token
+
+### Polls
+- `GET /polls/` - List all polls
+- `POST /polls/` - Create a new poll
+- `GET /polls/{poll_id}` - Get poll details
+- `POST /polls/{poll_id}/vote` - Vote on a poll
+- `GET /polls/{poll_id}/results` - Get poll results
+- `POST /polls/{poll_id}/close` - Close a poll
+
+### Users
+- `GET /users/me` - Get current user information
+
+## Development
+
+### Backend
+The backend is built with FastAPI and follows a clean architecture pattern:
+- Domain layer: Business logic and entities
+- Application layer: Use cases and DTOs
+- Infrastructure layer: Database and security implementations
+
+### Frontend
+The frontend is built with Streamlit and provides a simple, intuitive interface for:
+- User authentication
+- Poll creation and management
+- Voting on polls
+- Viewing results
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
