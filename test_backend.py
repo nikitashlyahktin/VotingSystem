@@ -1,6 +1,7 @@
 import requests
 from requests.exceptions import ConnectionError, Timeout, RequestException
 
+
 def test_connection(url: str) -> bool:
     """Check if the given URL is reachable."""
     print(f"🔌 Testing connection to {url} ...")
@@ -16,6 +17,7 @@ def test_connection(url: str) -> bool:
     except Exception as e:
         print(f"⚠️ Unexpected error while testing connection: {str(e)}\n")
     return False
+
 
 def send_registration_request(base_url: str):
     """Send a test registration request to the given base URL."""
@@ -49,6 +51,7 @@ def send_registration_request(base_url: str):
     except RequestException as e:
         print(f"❗ Request failed: {str(e)}\n")
 
+
 def test_registration_on_ports():
     """Try registration on multiple local ports."""
     ports = [8000, 8001, 8002]
@@ -63,6 +66,6 @@ def test_registration_on_ports():
         else:
             print(f"➡️ Skipping registration attempt on port {port} due to connection failure.\n")
 
+
 if __name__ == "__main__":
     test_registration_on_ports()
-
