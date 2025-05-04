@@ -213,8 +213,7 @@ class TestPollAPI:
         if not vote_success:
             print(
                 f"All voting attempts failed. Last response: {vote_response.status_code} - {vote_response.text}")
-            assert vote_response.status_code == 422, f"Expected 422 validation error, got {
-                vote_response.status_code}"
+            assert vote_response.status_code == 422, f"Expected 422 validation error, got {vote_response.status_code}"
             return
 
         # Successfully voted, now verify the vote was recorded
@@ -372,8 +371,7 @@ class TestPollAPI:
         if not vote_success:
             print(
                 f"All multiple-choice voting attempts failed. Last response: {vote_response.status_code} - {vote_response.text}")
-            assert vote_response.status_code == 422, f"Expected 422 validation error, got {
-                vote_response.status_code}"
+            assert vote_response.status_code == 422, f"Expected 422 validation error, got {vote_response.status_code}"
             return
 
         # We successfully voted, now try to verify the votes were recorded
@@ -493,9 +491,7 @@ class TestPollAPI:
 
         if not first_vote_success:
             print(
-                f"All voting attempts failed. Last response: {
-                    first_vote_response.status_code} - {
-                    first_vote_response.text}")
+                f"All voting attempts failed. Last response: {first_vote_response.status_code} - {first_vote_response.text}")
             # If the API only allows voting through the UI or has a unique structure,
             # we'll skip the test rather than fail it
             pytest.skip("Could not vote successfully with any payload format")
@@ -521,9 +517,7 @@ class TestPollAPI:
 
         # Assert - we consider it successful if the API accepts the request
         assert response.status_code in [
-            200, 201, 204], f"Failed to change vote: {
-            response.status_code}: {
-            response.text}"
+            200, 201, 204], f"Failed to change vote: {response.status_code}: {response.text}"
 
     async def test_get_polls_by_user(self, authenticated_client, test_poll):
         """Test getting polls created by the current user"""

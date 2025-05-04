@@ -478,8 +478,7 @@ class TestPollsAPI:
             response_text = response.text.lower()
             assert any(
                 msg in response_text for msg in [
-                    "not found", "does not exist", "no poll", "invalid"]), f"Expected 'not found' message, got: {
-                response.text}"
+                    "not found", "does not exist", "no poll", "invalid"]), f"Expected 'not found' message, got: {response.text}"
 
     async def test_vote_with_invalid_option(self, authenticated_client, test_poll):
         """Test voting with an invalid option ID"""
@@ -496,8 +495,7 @@ class TestPollsAPI:
         print(f"Response body: {response.text}")
 
         # Both 400 (semantic error) and 422 (validation error) are acceptable
-        assert response.status_code in [
-            400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {response.status_code}"
+        assert response.status_code in [400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {response.status_code}"
 
     async def test_multiple_choice_validation(self, authenticated_client, test_poll):
         """Test validation for multiple-choice polls"""
@@ -525,8 +523,7 @@ class TestPollsAPI:
             print(f"Response body: {response.text}")
 
             # Both status codes are acceptable for validation failures
-            assert response.status_code in [
-                400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {response.status_code}"
+            assert response.status_code in [400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {response.status_code}"
         else:
             # If the poll IS multiple choice, skip this test
             pytest.skip("Test poll is already multiple choice, cannot test validation failure")
