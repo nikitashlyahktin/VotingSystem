@@ -1,7 +1,6 @@
 import uvicorn
 import logging
 import sys
-from app.main import app
 
 # Configure logging
 logging.basicConfig(
@@ -17,7 +16,7 @@ if __name__ == "__main__":
         # Print environment information
         logger.info("Python version: %s", sys.version)
         logger.info("Current working directory: %s", sys.path[0])
-        
+
         # Start the server
         uvicorn.run(
             "app.main:app",
@@ -31,4 +30,4 @@ if __name__ == "__main__":
         )
     except Exception as e:
         logger.error(f"Error starting server: {str(e)}")
-        raise 
+        raise

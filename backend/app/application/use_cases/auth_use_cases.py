@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 from backend.app.domain.services.auth_service import AuthService
 from backend.app.domain.repositories.user_repository import UserRepository
