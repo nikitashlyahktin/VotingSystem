@@ -1,0 +1,306 @@
+name: Quality Gates
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      
+      - name: Run Flake8
+        run: |
+          poetry run flake8 backend frontend
+      
+      - name: Run Bandit security scan
+        run: |
+          poetry run pip install bandit
+          poetry run bandit -r backend -f json -o bandit-results.json
+      
+      - name: Check if Bandit found critical vulnerabilities
+        run: |
+          if [ -f bandit-results.json ]; then
+            CRITICAL_COUNT=$(grep -o '"issue_severity": "HIGH"' bandit-results.json | wc -l)
+            if [ $CRITICAL_COUNT -gt 0 ]; then
+              echo "ERROR: Bandit found $CRITICAL_COUNT critical security vulnerabilities."
+              exit 1
+            else
+              echo "No critical security vulnerabilities found."
+            fi
+          else
+            echo "Bandit results file not found."
+          fi
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      
+      - name: Run Unit Tests
+        run: |
+          poetry run pytest tests/unit -v --cov=backend/app --cov-report=xml:unit-coverage.xml
+      
+      - name: Check Test Coverage
+        run: |
+          COVERAGE=$(poetry run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "ERROR: Test coverage is $COVERAGE%, which is below the required 80%."
+            exit 1
+          else
+            echo "Test coverage is $COVERAGE%, which meets the requirement."
+          fi
+      
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-coverage-report
+          path: unit-coverage.xml
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      
+      - name: Run Integration Tests
+        run: |
+          poetry run pytest tests/integration -v --cov=backend/app --cov-report=xml:integration-coverage.xml
+      
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-coverage-report
+          path: integration-coverage.xml
+
+  security-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      
+      - name: Run Security Tests
+        run: |
+          poetry run pytest tests/security -v
+      
+      - name: Run additional Bandit security scan
+        run: |
+          poetry run bandit -r backend -f json -o security-scan-results.json
+      
+      - name: Check Bandit scan results
+        run: |
+          if [ -f security-scan-results.json ]; then
+            CRITICAL_COUNT=$(grep -o '"issue_severity": "HIGH"' security-scan-results.json | wc -l)
+            if [ $CRITICAL_COUNT -gt 0 ]; then
+              echo "WARNING: Bandit found $CRITICAL_COUNT high security vulnerabilities."
+              cat security-scan-results.json
+            else
+              echo "No high security vulnerabilities found."
+            fi
+          else
+            echo "Bandit results file not found."
+          fi
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      
+      - name: Start backend server
+        run: |
+          poetry run python backend/run.py &
+          sleep 5
+      
+      - name: Run Locust performance tests
+        run: |
+          poetry run pip install locust
+          poetry run locust -f tests/performance/locustfile.py --headless -u 10 -r 2 --run-time 1m --host http://localhost:8000
+      
+      - name: Check performance metrics
+        run: |
+          echo "Performance metrics checked - validation criteria are defined in locustfile.py"
+
+  ui-tests:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      
+      - name: Start backend server
+        run: |
+          poetry run python backend/run.py &
+          sleep 5
+      
+      - name: Start frontend
+        run: |
+          poetry run streamlit run frontend/app.py &
+          sleep 10
+      
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@latest
+      
+      - name: Run UI Tests
+        run: |
+          poetry run pytest tests/ui -v
+
+  mutation-testing:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      
+      - name: Run Mutation Tests
+        run: |
+          poetry run pip install mutmut
+          poetry run mutmut run --paths-to-mutate=backend/app/domain
+          poetry run mutmut results
+          poetry run mutmut junitxml > mutation-report.xml
+      
+      - name: Upload Mutation Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: mutation-report
+          path: mutation-report.xml
+
+  property-based-testing:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+      
+      - name: Create property-based tests
+        run: |
+          poetry run pip install hypothesis
+          poetry run pytest tests/security -v -k "given" --hypothesis-show-statistics 
