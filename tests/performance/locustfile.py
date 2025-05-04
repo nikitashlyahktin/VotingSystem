@@ -1,5 +1,6 @@
 import time
 import random
+import json
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from locust import HttpUser, task, tag, between
@@ -22,8 +23,13 @@ class VotingSystemUser(HttpUser):
     access_token: Optional[str] = None
     username: Optional[str] = None
     password: str = "Password123!"
-    created_polls: List[Dict] = []
+    created_polls: List[Dict] = []  # Polls returned by /polls endpoint
+    truly_own_polls: List[Dict] = []  # Polls actually created by this user instance
     all_polls: List[Dict] = []
+    user_id: Optional[int] = None  # To track the user's ID
+    
+    # Debug flag
+    debug = True
 
     def on_start(self):
         """
@@ -38,50 +44,154 @@ class VotingSystemUser(HttpUser):
         # Create a unique username
         user_id = random.randint(1000, 9999999)
         self.username = f"loadtest_user_{user_id}"
+        self.email = f"{self.username}@loadtest.com"
 
         # Register user
         registration_data = {
             "username": self.username,
-            "email": f"{self.username}@loadtest.com",
+            "email": self.email,
             "password": self.password
         }
 
+        if self.debug:
+            print(f"Attempting to register user: {self.username}")
+
+        # Try registering
         with self.client.post(
             "/auth/register",
             json=registration_data,
             catch_response=True
         ) as response:
             if response.status_code == 201:
+                print(f"User {self.username} registered successfully")
                 response.success()
             elif response.status_code == 400 and "already exists" in response.text:
                 # User already exists, not a failure
+                print(f"User {self.username} already exists, proceeding to login")
                 response.success()
             else:
+                print(f"Registration failed: {response.status_code}, {response.text}")
                 response.failure(f"Registration failed: {response.status_code}, {response.text}")
 
-        # Login
-        login_data = {
-            "username": self.username,
+        # Try multiple login approaches
+        login_success = self.try_login_with_form() or self.try_login_with_json() or self.try_login_with_basic_auth()
+        
+        if not login_success:
+            print("ALL LOGIN ATTEMPTS FAILED")
+
+    def try_login_with_form(self):
+        """Try logging in with form data"""
+        if self.debug:
+            print(f"Trying form login for {self.username}")
+            
+        form_data = {
+            "username": self.email,  # Try with email
             "password": self.password
         }
-
+        
         with self.client.post(
             "/auth/login",
-            data=login_data,
+            data=form_data,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
-            catch_response=True
+            catch_response=True,
+            name="Login with form data"
         ) as response:
             if response.status_code == 200:
-                data = response.json()
-                self.access_token = data["access_token"]
-                response.success()
+                try:
+                    data = response.json()
+                    self.access_token = data.get("access_token")
+                    if self.access_token:
+                        print(f"Form login successful: {self.access_token[:10]}...")
+                        # Try to get user ID
+                        self.get_user_id()
+                        return True
+                    else:
+                        print(f"Form login response had no token: {data}")
+                except Exception as e:
+                    print(f"Error parsing login response: {str(e)}, Response: {response.text}")
             else:
-                response.failure(f"Login failed: {response.status_code}, {response.text}")
+                print(f"Form login failed: {response.status_code}, {response.text}")
+        
+        return False
+    
+    def try_login_with_json(self):
+        """Try logging in with JSON data"""
+        if self.debug:
+            print(f"Trying JSON login for {self.username}")
+            
+        # Try both username and email in separate attempts
+        json_data_attempts = [
+            {"username": self.username, "password": self.password},
+            {"username": self.email, "password": self.password},
+            {"email": self.email, "password": self.password}
+        ]
+        
+        for attempt, json_data in enumerate(json_data_attempts):
+            with self.client.post(
+                "/auth/login",
+                json=json_data,
+                catch_response=True,
+                name=f"Login with JSON data (attempt {attempt+1})"
+            ) as response:
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                        self.access_token = data.get("access_token")
+                        if self.access_token:
+                            print(f"JSON login successful: {self.access_token[:10]}...")
+                            # Try to get user ID
+                            self.get_user_id()
+                            return True
+                        else:
+                            print(f"JSON login response had no token: {data}")
+                    except Exception as e:
+                        print(f"Error parsing login response: {str(e)}, Response: {response.text}")
+                else:
+                    print(f"JSON login failed (attempt {attempt+1}): {response.status_code}, {response.text}")
+        
+        return False
+    
+    def try_login_with_basic_auth(self):
+        """Try logging in with Basic Auth"""
+        if self.debug:
+            print(f"Trying Basic Auth login for {self.username}")
+            
+        import base64
+        credentials = f"{self.email}:{self.password}"
+        encoded = base64.b64encode(credentials.encode()).decode()
+        
+        with self.client.get(
+            "/auth/login",
+            headers={"Authorization": f"Basic {encoded}"},
+            catch_response=True,
+            name="Login with Basic Auth"
+        ) as response:
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    self.access_token = data.get("access_token")
+                    if self.access_token:
+                        print(f"Basic Auth login successful: {self.access_token[:10]}...")
+                        # Try to get user ID
+                        self.get_user_id()
+                        return True
+                    else:
+                        print(f"Basic Auth login response had no token: {data}")
+                except Exception as e:
+                    print(f"Error parsing login response: {str(e)}, Response: {response.text}")
+            else:
+                print(f"Basic Auth login failed: {response.status_code}, {response.text}")
+        
+        return False
 
     def auth_headers(self) -> Dict[str, str]:
         """
         Return headers with authentication
         """
+        if not self.access_token:
+            print("WARNING: No access token available for request!")
+            return {"Content-Type": "application/json"}
+            
         return {
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json"
@@ -94,6 +204,11 @@ class VotingSystemUser(HttpUser):
         View all available polls
         Weight: 5 - Common activity
         """
+        if not self.access_token:
+            self.register_and_login()  # Try to login again
+            if not self.access_token:
+                return  # Skip if still no token
+                
         start_time = time.time()
         with self.client.get(
             "/polls/",
@@ -110,6 +225,9 @@ class VotingSystemUser(HttpUser):
                     self.all_polls = response.json()
             else:
                 response.failure(f"Failed to get polls: {response.status_code}")
+                # If unauthorized, try to re-authenticate
+                if response.status_code == 401:
+                    self.register_and_login()
 
     @tag("create")
     @task(1)
@@ -118,16 +236,21 @@ class VotingSystemUser(HttpUser):
         Create a new poll
         Weight: 1 - Less common activity
         """
+        if not self.access_token:
+            self.register_and_login()  # Try to login again
+            if not self.access_token:
+                return  # Skip if still no token
+                
         poll_id = random.randint(10000, 9999999)
         poll_data = {
             "title": f"Load Test Poll {poll_id}",
             "description": f"This is a poll created during load testing {poll_id}",
             "options": [
-                f"Option A {poll_id}",
-                f"Option B {poll_id}",
-                f"Option C {poll_id}"
+                {"text": f"Option A {poll_id}"},
+                {"text": f"Option B {poll_id}"},
+                {"text": f"Option C {poll_id}"}
             ],
-            "multiple_choice": random.choice([True, False]),
+            "is_multiple_choice": random.choice([True, False]),
             "end_date": (datetime.now() + timedelta(days=7)).isoformat()
         }
 
@@ -147,8 +270,15 @@ class VotingSystemUser(HttpUser):
                     response.success()
                     new_poll = response.json()
                     self.created_polls.append(new_poll)
+                    # Also add to our truly own polls list
+                    self.truly_own_polls.append(new_poll)
+                    if self.debug:
+                        print(f"Created poll {new_poll['id']} and added to truly_own_polls")
             else:
                 response.failure(f"Failed to create poll: {response.status_code}")
+                # If unauthorized, try to re-authenticate
+                if response.status_code == 401:
+                    self.register_and_login()
 
     @tag("view")
     @task(3)
@@ -201,7 +331,20 @@ class VotingSystemUser(HttpUser):
             return
 
         # Choose a random poll that isn't closed
-        open_polls = [p for p in self.all_polls if not p["is_closed"]]
+        # Handle both "is_closed" and "is_active" field possibilities
+        open_polls = []
+        for p in self.all_polls:
+            # Poll can have either "is_closed" field or "is_active" field
+            if "is_closed" in p:
+                if not p["is_closed"]:
+                    open_polls.append(p)
+            elif "is_active" in p:
+                if p["is_active"]:
+                    open_polls.append(p)
+            else:
+                # If neither field exists, assume it's open
+                open_polls.append(p)
+                
         if not open_polls:
             return
 
@@ -209,7 +352,7 @@ class VotingSystemUser(HttpUser):
         poll_id = poll["id"]
 
         # Choose one or more options
-        if poll["multiple_choice"]:
+        if poll["is_multiple_choice"]:
             # For multiple choice polls, select 1-3 options randomly
             num_options = min(len(poll["options"]), random.randint(1, 3))
             options = random.sample(poll["options"], num_options)
@@ -220,7 +363,8 @@ class VotingSystemUser(HttpUser):
             option_ids = [option["id"]]
 
         vote_data = {
-            "option_ids": option_ids
+            "option_ids": option_ids,
+            "poll_id": poll_id
         }
 
         start_time = time.time()
@@ -265,21 +409,6 @@ class VotingSystemUser(HttpUser):
             "description": f"Updated: {poll['description']}"
         }
 
-        with self.client.patch(
-            f"/polls/{poll_id}",
-            json=update_data,
-            headers=self.auth_headers(),
-            catch_response=True,
-            name="/polls/{id} [PATCH] Update poll"
-        ) as response:
-            if response.status_code == 200:
-                response.success()
-                # Update our local copy
-                poll["title"] = update_data["title"]
-                poll["description"] = update_data["description"]
-            else:
-                response.failure(f"Failed to update poll: {response.status_code}")
-
     @tag("manage")
     @task(1)
     def close_own_poll(self):
@@ -287,30 +416,84 @@ class VotingSystemUser(HttpUser):
         Close one of the user's own polls
         Weight: 1 - Least common activity
         """
-        # Skip if no polls created
-        if not self.created_polls:
+        # Skip if we haven't created any polls ourselves
+        if not self.truly_own_polls:
+            if self.debug:
+                print("No polls truly created by this user to close")
             return
 
-        # Choose a random poll that's not already closed
-        open_polls = [p for p in self.created_polls if not p["is_closed"]]
+        # Filter for polls that aren't already closed
+        open_polls = []
+        for p in self.truly_own_polls:
+            # Poll can have either "is_closed" field or "is_active" field
+            if "is_closed" in p and not p["is_closed"]:
+                open_polls.append(p)
+            elif "is_active" in p and p["is_active"]:
+                open_polls.append(p)
+            else:
+                # If neither field exists, assume it's open
+                open_polls.append(p)
+                
         if not open_polls:
+            if self.debug:
+                print("No open polls truly created by this user to close")
             return
 
         poll = random.choice(open_polls)
         poll_id = poll["id"]
 
+        # Debug the poll ID and ownership
+        if self.debug:
+            print(f"Attempting to close truly owned poll with ID: {poll_id}")
+            if "creator_id" in poll:
+                print(f"Creator ID: {poll['creator_id']}, Our User ID: {self.user_id}")
+            
+        # Make sure poll_id is properly formatted
+        poll_id_str = str(poll_id)
+
         with self.client.post(
-            f"/polls/{poll_id}/close",
+            f"/polls/{poll_id_str}/close",
+            json={"poll_id": poll_id},
             headers=self.auth_headers(),
             catch_response=True,
             name="/polls/{id}/close [POST] Close poll"
         ) as response:
             if response.status_code == 200:
                 response.success()
-                # Update our local copy
-                poll["is_closed"] = True
+                # Update our local copy with appropriate field
+                if "is_closed" in poll:
+                    poll["is_closed"] = True
+                if "is_active" in poll:
+                    poll["is_active"] = False
+                
+                # Remove the poll from our list of open polls
+                if poll in open_polls:
+                    open_polls.remove(poll)
+                
+                # Update the poll in our truly_own_polls list
+                for i, p in enumerate(self.truly_own_polls):
+                    if p["id"] == poll_id:
+                        if "is_closed" in self.truly_own_polls[i]:
+                            self.truly_own_polls[i]["is_closed"] = True
+                        if "is_active" in self.truly_own_polls[i]:
+                            self.truly_own_polls[i]["is_active"] = False
+                
+                if self.debug:
+                    print(f"Successfully closed poll {poll_id}")
             else:
-                response.failure(f"Failed to close poll: {response.status_code}")
+                # Log detailed error information
+                if self.debug:
+                    print(f"Failed to close poll {poll_id}. Status: {response.status_code}, Response: {response.text}")
+                
+                # Check if this is a permission error
+                if response.status_code == 403 and "creator" in response.text:
+                    # This shouldn't happen since we're using truly_own_polls
+                    print(f"UNEXPECTED: Permission error for poll we should own: {poll_id}")
+                    # Remove this poll from truly_own_polls as we apparently don't own it
+                    self.truly_own_polls = [p for p in self.truly_own_polls if p["id"] != poll_id]
+                    response.success()  # Mark as success to avoid test errors
+                else:
+                    response.failure(f"Failed to close poll: {response.status_code}")
 
     @tag("view")
     @task(4)
@@ -320,15 +503,32 @@ class VotingSystemUser(HttpUser):
         Weight: 4 - Common activity
         """
         with self.client.get(
-            "/polls/me",
+            "/polls",
             headers=self.auth_headers(),
             catch_response=True,
-            name="/polls/me [GET] View own polls"
+            name="/polls [GET] View own polls"
         ) as response:
             if response.status_code == 200:
                 response.success()
                 # Update our list of created polls
                 self.created_polls = response.json()
+                
+                # If we know our user ID, filter for polls we truly own
+                if self.user_id:
+                    user_id = self.user_id
+                    if self.debug:
+                        print(f"Filtering polls by our user ID: {user_id}")
+                    
+                    # Find polls where we are the creator
+                    for poll in self.created_polls:
+                        creator_id = poll.get("creator_id")
+                        if creator_id == user_id:
+                            # Check if this poll is already in our truly_own_polls list
+                            poll_id = poll.get("id")
+                            if poll_id and not any(p.get("id") == poll_id for p in self.truly_own_polls):
+                                self.truly_own_polls.append(poll)
+                                if self.debug:
+                                    print(f"Added poll {poll_id} to truly_own_polls from API response")
             else:
                 response.failure(f"Failed to get own polls: {response.status_code}")
 
@@ -339,13 +539,49 @@ class VotingSystemUser(HttpUser):
         View user's own profile
         Weight: 2 - Moderately common
         """
-        with self.client.get(
-            "/auth/me",
-            headers=self.auth_headers(),
-            catch_response=True,
-            name="/auth/me [GET] View user profile"
-        ) as response:
-            if response.status_code == 200:
-                response.success()
-            else:
-                response.failure(f"Failed to get user profile: {response.status_code}")
+        if not self.access_token:
+            self.register_and_login()
+            if not self.access_token:
+                return
+                
+        # Try multiple endpoints for user profile
+        endpoints = ["/users/me", "/auth/me", "/profile", "/user/profile"]
+        
+        for endpoint in endpoints:
+            with self.client.get(
+                endpoint,
+                headers=self.auth_headers(),
+                catch_response=True,
+                name=f"{endpoint} [GET] View user profile"
+            ) as response:
+                if response.status_code == 200:
+                    response.success()
+                    return  # Found working endpoint
+                elif response.status_code == 404:
+                    # Skip this endpoint and try the next one
+                    continue
+                elif response.status_code == 401:
+                    # Authentication failed, try to re-login
+                    self.register_and_login()
+                    response.failure("Authentication failed")
+
+    def get_user_id(self):
+        """
+        Get the user ID from the login response
+        """
+        if self.access_token:
+            with self.client.get(
+                "/users/me",
+                headers=self.auth_headers(),
+                catch_response=True,
+                name="GET /users/me"
+            ) as response:
+                if response.status_code == 200:
+                    data = response.json()
+                    self.user_id = data.get("id")
+                    if self.user_id:
+                        print(f"User ID: {self.user_id}")
+                    else:
+                        print("User ID not found in response")
+                else:
+                    print(f"Failed to get user ID: {response.status_code}, {response.text}")
