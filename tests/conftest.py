@@ -187,9 +187,7 @@ async def test_poll(authenticated_client, async_session):
         # Print detailed information if poll creation fails
         if response.status_code != 201:
             logger.error(
-                f"Failed to create test poll. Status: {
-                    response.status_code}, Response: {
-                    response.text}")
+                f"Failed to create test poll. Status: {response.status_code}, Response: {response.text}")
             # Try to identify authentication errors specifically
             if response.status_code == 401:
                 auth_header = authenticated_client.headers.get("Authorization", "")
