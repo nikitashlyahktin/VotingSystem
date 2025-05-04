@@ -74,7 +74,7 @@ jobs:
       
       - name: Run Unit Tests
         run: |
-          poetry run pytest tests/unit -v --cov=backend/app --cov-report=xml:unit-coverage.xml
+          poetry run pytest --cov-report=xml:unit-coverage.xml
       
       - name: Check Test Coverage
         run: |
