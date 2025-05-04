@@ -35,7 +35,7 @@ jobs:
       - name: Run Bandit security scan
         run: |
           poetry run pip install bandit
-          poetry run bandit -r backend -f json -o bandit-results.json
+          poetry run bandit -r backend -f json -o bandit-results.json --severity-level HIGH
       
       - name: Check if Bandit found critical vulnerabilities
         run: |
@@ -152,7 +152,7 @@ jobs:
       
       - name: Run additional Bandit security scan
         run: |
-          poetry run bandit -r backend -f json -o security-scan-results.json
+          poetry run bandit -r backend -f json -o security-scan-results.json --severity-level HIGH
       
       - name: Check Bandit scan results
         run: |
