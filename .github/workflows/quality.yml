@@ -35,12 +35,12 @@ jobs:
       - name: Run Bandit security scan
         run: |
           poetry run pip install bandit
-          poetry run bandit -r backend -f json -o bandit-results.json --severity-level HIGH
+          poetry run bandit -r backend -f json -o bandit-results.json --severity-level high
       
       - name: Check if Bandit found critical vulnerabilities
         run: |
           if [ -f bandit-results.json ]; then
-            CRITICAL_COUNT=$(grep -o '"issue_severity": "HIGH"' bandit-results.json | wc -l)
+            CRITICAL_COUNT=$(grep -o '"issue_severity": "high"' bandit-results.json | wc -l)
             if [ $CRITICAL_COUNT -gt 0 ]; then
               echo "ERROR: Bandit found $CRITICAL_COUNT critical security vulnerabilities."
               exit 1
@@ -152,12 +152,12 @@ jobs:
       
       - name: Run additional Bandit security scan
         run: |
-          poetry run bandit -r backend -f json -o security-scan-results.json --severity-level HIGH
+          poetry run bandit -r backend -f json -o security-scan-results.json --severity-level high
       
       - name: Check Bandit scan results
         run: |
           if [ -f security-scan-results.json ]; then
-            CRITICAL_COUNT=$(grep -o '"issue_severity": "HIGH"' security-scan-results.json | wc -l)
+            CRITICAL_COUNT=$(grep -o '"issue_severity": "high"' security-scan-results.json | wc -l)
             if [ $CRITICAL_COUNT -gt 0 ]; then
               echo "WARNING: Bandit found $CRITICAL_COUNT high security vulnerabilities."
               cat security-scan-results.json
