@@ -1,9 +1,9 @@
 import time
 import random
-import json
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from locust import HttpUser, task, tag, between
+
 
 class VotingSystemUser(HttpUser):
     """
@@ -14,23 +14,23 @@ class VotingSystemUser(HttpUser):
     - Voting in polls
     - Viewing poll results
     """
-    
+
     # Wait time between tasks
     wait_time = between(1, 3)
-    
+
     # User state
     access_token: Optional[str] = None
     username: Optional[str] = None
     password: str = "Password123!"
     created_polls: List[Dict] = []
     all_polls: List[Dict] = []
-    
+
     def on_start(self):
         """
         Initialize the user by registering and logging in
         """
         self.register_and_login()
-    
+
     def register_and_login(self):
         """
         Register a new user and then log in
@@ -38,17 +38,17 @@ class VotingSystemUser(HttpUser):
         # Create a unique username
         user_id = random.randint(1000, 9999999)
         self.username = f"loadtest_user_{user_id}"
-        
+
         # Register user
         registration_data = {
             "username": self.username,
             "email": f"{self.username}@loadtest.com",
             "password": self.password
         }
-        
+
         with self.client.post(
-            "/auth/register", 
-            json=registration_data, 
+            "/auth/register",
+            json=registration_data,
             catch_response=True
         ) as response:
             if response.status_code == 201:
@@ -58,16 +58,16 @@ class VotingSystemUser(HttpUser):
                 response.success()
             else:
                 response.failure(f"Registration failed: {response.status_code}, {response.text}")
-        
+
         # Login
         login_data = {
             "username": self.username,
             "password": self.password
         }
-        
+
         with self.client.post(
             "/auth/login",
-            data=login_data, 
+            data=login_data,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             catch_response=True
         ) as response:
@@ -77,7 +77,7 @@ class VotingSystemUser(HttpUser):
                 response.success()
             else:
                 response.failure(f"Login failed: {response.status_code}, {response.text}")
-    
+
     def auth_headers(self) -> Dict[str, str]:
         """
         Return headers with authentication
@@ -86,7 +86,7 @@ class VotingSystemUser(HttpUser):
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json"
         }
-    
+
     @tag("view")
     @task(5)
     def view_all_polls(self):
@@ -96,7 +96,7 @@ class VotingSystemUser(HttpUser):
         """
         start_time = time.time()
         with self.client.get(
-            "/polls/", 
+            "/polls/",
             headers=self.auth_headers(),
             catch_response=True,
             name="/polls/ [GET] View all polls"
@@ -110,7 +110,7 @@ class VotingSystemUser(HttpUser):
                     self.all_polls = response.json()
             else:
                 response.failure(f"Failed to get polls: {response.status_code}")
-    
+
     @tag("create")
     @task(1)
     def create_poll(self):
@@ -123,17 +123,17 @@ class VotingSystemUser(HttpUser):
             "title": f"Load Test Poll {poll_id}",
             "description": f"This is a poll created during load testing {poll_id}",
             "options": [
-                f"Option A {poll_id}", 
-                f"Option B {poll_id}", 
+                f"Option A {poll_id}",
+                f"Option B {poll_id}",
                 f"Option C {poll_id}"
             ],
             "multiple_choice": random.choice([True, False]),
             "end_date": (datetime.now() + timedelta(days=7)).isoformat()
         }
-        
+
         start_time = time.time()
         with self.client.post(
-            "/polls/", 
+            "/polls/",
             json=poll_data,
             headers=self.auth_headers(),
             catch_response=True,
@@ -149,7 +149,7 @@ class VotingSystemUser(HttpUser):
                     self.created_polls.append(new_poll)
             else:
                 response.failure(f"Failed to create poll: {response.status_code}")
-    
+
     @tag("view")
     @task(3)
     def view_specific_poll(self):
@@ -160,15 +160,15 @@ class VotingSystemUser(HttpUser):
         # Get list of all polls if needed
         if not self.all_polls:
             self.view_all_polls()
-        
+
         # Skip if no polls found
         if not self.all_polls:
             return
-        
+
         # Choose a random poll
         poll = random.choice(self.all_polls)
         poll_id = poll["id"]
-        
+
         start_time = time.time()
         with self.client.get(
             f"/polls/{poll_id}",
@@ -184,7 +184,7 @@ class VotingSystemUser(HttpUser):
                     response.success()
             else:
                 response.failure(f"Failed to get poll details: {response.status_code}")
-    
+
     @tag("vote")
     @task(2)
     def vote_in_poll(self):
@@ -195,19 +195,19 @@ class VotingSystemUser(HttpUser):
         # Get list of all polls if needed
         if not self.all_polls:
             self.view_all_polls()
-        
+
         # Skip if no polls found
         if not self.all_polls:
             return
-        
+
         # Choose a random poll that isn't closed
         open_polls = [p for p in self.all_polls if not p["is_closed"]]
         if not open_polls:
             return
-        
+
         poll = random.choice(open_polls)
         poll_id = poll["id"]
-        
+
         # Choose one or more options
         if poll["multiple_choice"]:
             # For multiple choice polls, select 1-3 options randomly
@@ -218,11 +218,11 @@ class VotingSystemUser(HttpUser):
             # For single choice, just pick one
             option = random.choice(poll["options"])
             option_ids = [option["id"]]
-        
+
         vote_data = {
             "option_ids": option_ids
         }
-        
+
         start_time = time.time()
         with self.client.post(
             f"/polls/{poll_id}/vote",
@@ -243,7 +243,7 @@ class VotingSystemUser(HttpUser):
                 response.success()
             else:
                 response.failure(f"Failed to vote: {response.status_code}, {response.text}")
-    
+
     @tag("manage")
     @task(1)
     def update_own_poll(self):
@@ -254,17 +254,17 @@ class VotingSystemUser(HttpUser):
         # Skip if no polls created
         if not self.created_polls:
             return
-        
+
         # Choose a random poll created by this user
         poll = random.choice(self.created_polls)
         poll_id = poll["id"]
-        
+
         # Prepare update data
         update_data = {
             "title": f"Updated: {poll['title']}",
             "description": f"Updated: {poll['description']}"
         }
-        
+
         with self.client.patch(
             f"/polls/{poll_id}",
             json=update_data,
@@ -279,7 +279,7 @@ class VotingSystemUser(HttpUser):
                 poll["description"] = update_data["description"]
             else:
                 response.failure(f"Failed to update poll: {response.status_code}")
-    
+
     @tag("manage")
     @task(1)
     def close_own_poll(self):
@@ -290,15 +290,15 @@ class VotingSystemUser(HttpUser):
         # Skip if no polls created
         if not self.created_polls:
             return
-        
+
         # Choose a random poll that's not already closed
         open_polls = [p for p in self.created_polls if not p["is_closed"]]
         if not open_polls:
             return
-        
+
         poll = random.choice(open_polls)
         poll_id = poll["id"]
-        
+
         with self.client.post(
             f"/polls/{poll_id}/close",
             headers=self.auth_headers(),
@@ -311,7 +311,7 @@ class VotingSystemUser(HttpUser):
                 poll["is_closed"] = True
             else:
                 response.failure(f"Failed to close poll: {response.status_code}")
-    
+
     @tag("view")
     @task(4)
     def view_own_polls(self):
@@ -331,7 +331,7 @@ class VotingSystemUser(HttpUser):
                 self.created_polls = response.json()
             else:
                 response.failure(f"Failed to get own polls: {response.status_code}")
-    
+
     @tag("view")
     @task(2)
     def view_user_profile(self):
@@ -348,4 +348,4 @@ class VotingSystemUser(HttpUser):
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Failed to get user profile: {response.status_code}") 
+                response.failure(f"Failed to get user profile: {response.status_code}")

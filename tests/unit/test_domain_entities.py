@@ -1,4 +1,3 @@
-import pytest
 from datetime import datetime, timedelta
 from backend.app.domain.entities.user import User
 from backend.app.domain.entities.poll import Poll, PollOption
@@ -78,7 +77,7 @@ class TestPollEntity:
             PollOption(id=1, poll_id=10, text="Option 1", order=1),
             PollOption(id=2, poll_id=10, text="Option 2", order=2)
         ]
-        
+
         custom_poll = Poll(
             id=10,
             creator_id=1,
@@ -90,7 +89,7 @@ class TestPollEntity:
             closes_at=close_date,
             options=options
         )
-        
+
         assert custom_poll.id == 10
         assert custom_poll.creator_id == 1
         assert custom_poll.title == "Test Poll"
@@ -131,4 +130,4 @@ class TestVoteEntity:
         assert custom_vote.poll_id == 10
         assert custom_vote.option_id == 15
         assert custom_vote.created_at == now
-        assert custom_vote.updated_at == now 
+        assert custom_vote.updated_at == now
