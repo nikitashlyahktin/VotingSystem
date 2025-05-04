@@ -199,12 +199,10 @@ class TestPollsAPI:
         # If still not found but we have polls, consider the test passed
         if not test_poll_found and polls:
             print(
-                f"Test poll not found, but {
-                    len(polls)} polls were returned - considering test passed")
+                f"Test poll not found, but {len(polls)} polls were returned - considering test passed")
             test_poll_found = True
 
-        assert test_poll_found, f"Test poll ID {
-            test_poll['id']} not found in poll list with IDs: {poll_ids}"
+        assert test_poll_found, f"Test poll ID {test_poll['id']} not found in poll list with IDs: {poll_ids}"
 
     async def test_get_polls_with_pagination(self, authenticated_client):
         """Test pagination of poll list"""
@@ -264,8 +262,7 @@ class TestPollsAPI:
         assert isinstance(active_polls, list)
 
         print(f"Looking for test poll: ID={test_poll['id']}, Title={test_poll['title']}")
-        print(f"Active polls in response: {[(poll.get('id'),
-                                             poll.get('title')) for poll in active_polls]}")
+        print(f"Active polls in response: {[(poll.get('id'), poll.get('title')) for poll in active_polls]}")
 
         # Check if there are any polls returned
         if not active_polls:
@@ -294,12 +291,10 @@ class TestPollsAPI:
         # If still not found but we have active polls, consider the test passed
         if not test_poll_found and active_polls:
             print(
-                f"Test poll not found, but {
-                    len(active_polls)} active polls were returned - considering test passed")
+                f"Test poll not found, but {len(active_polls)} active polls were returned - considering test passed")
             test_poll_found = True
 
-        assert test_poll_found, f"Test poll ID {
-            test_poll['id']} not found in active poll list: {active_poll_ids}"
+        assert test_poll_found, f"Test poll ID {test_poll['id']} not found in active poll list: {active_poll_ids}"
 
         # Test that closed poll doesn't appear in active polls
         assert closed_poll_id not in active_poll_ids, "Closed poll found in active polls"
@@ -376,8 +371,7 @@ class TestPollsAPI:
             print(f"All voting attempts failed with status code: {vote_response.status_code}")
             print(f"Response body: {vote_response.text}")
             pytest.skip(
-                f"Could not find working vote endpoint or payload format. Last response: {
-                    vote_response.status_code}")
+                f"Could not find working vote endpoint or payload format. Last response: {vote_response.status_code}")
 
         # Verify the vote was recorded - try different endpoints
         results_verified = False
@@ -477,8 +471,7 @@ class TestPollsAPI:
 
         # Some APIs might return 422 instead of 404 for resource validation
         assert response.status_code in [
-            404, 422], f"Expected 404 Not Found or 422 Validation Error, got {
-            response.status_code}"
+            404, 422], f"Expected 404 Not Found or 422 Validation Error, got {response.status_code}"
 
         # If 404, check for not found message
         if response.status_code == 404:
@@ -504,8 +497,7 @@ class TestPollsAPI:
 
         # Both 400 (semantic error) and 422 (validation error) are acceptable
         assert response.status_code in [
-            400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {
-            response.status_code}"
+            400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {response.status_code}"
 
     async def test_multiple_choice_validation(self, authenticated_client, test_poll):
         """Test validation for multiple-choice polls"""
@@ -534,8 +526,7 @@ class TestPollsAPI:
 
             # Both status codes are acceptable for validation failures
             assert response.status_code in [
-                400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {
-                response.status_code}"
+                400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {response.status_code}"
         else:
             # If the poll IS multiple choice, skip this test
             pytest.skip("Test poll is already multiple choice, cannot test validation failure")
@@ -563,8 +554,7 @@ class TestPollsAPI:
 
             # Both status codes are acceptable for validation failures
             assert response.status_code in [
-                400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {
-                response.status_code}"
+                400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {response.status_code}"
 
             # If any payload is correctly rejected, consider the test passed
             if response.status_code in [400, 422]:
@@ -804,8 +794,7 @@ class TestPollsAPI:
 
         # Assert - Either 400 Bad Request, 403 Forbidden, or 422 Validation Error
         assert response.status_code in [
-            400, 403, 422], f"Expected 400 Bad Request, 403 Forbidden, or 422 Validation Error, got {
-            response.status_code}"
+            400, 403, 422], f"Expected 400 Bad Request, 403 Forbidden, or 422 Validation Error, got {response.status_code}"
 
     async def test_delete_poll(self, authenticated_client, test_poll):
         """Test deleting a poll"""
@@ -853,25 +842,21 @@ class TestPollsAPI:
 
                 # Check different possible result structures
                 if "total_votes" in results:
-                    assert results["total_votes"] == 0, f"Expected 0 total votes, got {
-                        results['total_votes']}"
+                    assert results["total_votes"] == 0, f"Expected 0 total votes, got {results['total_votes']}"
 
                 if "options" in results:
                     # Check vote counts in options
                     for option in results["options"]:
                         # Check for votes in different possible formats
                         if "vote_count" in option:
-                            assert option["vote_count"] == 0, f"Expected 0 votes for option, got {
-                                option['vote_count']}"
+                            assert option["vote_count"] == 0, f"Expected 0 votes for option, got {option['vote_count']}"
                         elif "votes" in option and isinstance(option["votes"], list):
                             assert len(
                                 option["votes"]) == 0, f"Expected empty votes list, got {len(option['votes'])} votes"
                         elif "votes" in option and isinstance(option["votes"], int):
-                            assert option["votes"] == 0, f"Expected 0 votes for option, got {
-                                option['votes']}"
+                            assert option["votes"] == 0, f"Expected 0 votes for option, got {option['votes']}"
                         elif "count" in option:
-                            assert option["count"] == 0, f"Expected 0 count for option, got {
-                                option['count']}"
+                            assert option["count"] == 0, f"Expected 0 count for option, got {option['count']}"
 
                 # If we found a results endpoint, we've verified there are no votes
                 return
@@ -1069,8 +1054,7 @@ class TestPollsAPI:
         print(f"Response body: {response.text}")
 
         assert response.status_code in [
-            400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {
-            response.status_code}"
+            400, 422], f"Expected 400 Bad Request or 422 Validation Error, got {response.status_code}"
 
         # Check for validation error message - this is optional as different APIs
         # have different error formats
@@ -1086,8 +1070,7 @@ class TestPollsAPI:
                 "empty",
                 "required"]
             contains_validation_term = any(term in response_text for term in validation_terms)
-            assert contains_validation_term, f"Response does not contain validation error terms: {
-                response.text}"
+            assert contains_validation_term, f"Response does not contain validation error terms: {response.text}"
 
     async def test_get_paginated_polls_edge_cases(self, authenticated_client):
         """Test pagination with edge cases"""

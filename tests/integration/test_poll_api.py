@@ -126,8 +126,7 @@ class TestPollAPI:
 
         # If we reach here, none of the methods worked - at least check that we got 405 for PATCH
         response = await authenticated_client.patch(f"/polls/{poll_id}", json=update_data)
-        assert response.status_code == 405, f"Expected 405 Method Not Allowed, got {
-            response.status_code}"
+        assert response.status_code == 405, f"Expected 405 Method Not Allowed, got {response.status_code}"
 
     async def test_close_poll(self, authenticated_client, test_poll):
         """Test closing a poll"""
