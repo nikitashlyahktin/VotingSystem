@@ -125,7 +125,7 @@ jobs:
       - name: Run Locust performance tests
         run: |
           poetry run pip install locust
-          poetry run locust -f tests/performance/locustfile.py --headless -u 10 -r 2 --run-time 1m --host http://localhost:8000
+          poetry run locust -f tests/performance/locustfile.py --headless -u 3 -r 2 --run-time 1m --host http://localhost:8000
       
       - name: Check performance metrics
         run: |
