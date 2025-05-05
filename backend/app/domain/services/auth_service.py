@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 
-from backend.app.domain.entities.user import User
-
 
 class AuthService(ABC):
     """Interface for authentication and authorization operations"""

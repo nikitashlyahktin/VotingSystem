@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from backend.app.domain.repositories.poll_repository import PollRepository
 from backend.app.domain.entities.poll import Poll, PollOption
