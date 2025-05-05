@@ -28,19 +28,16 @@ class TestAuthSecurity:
     )
     async def test_password_validation(self, client, password, is_valid):
         """Test password validation handles different cases securely"""
-        # Arrange
         user_data = {
             "username": f"security_test_{random.randint(1000, 9999)}",
             "email": f"security{random.randint(1000, 9999)}@test.com",
             "password": password
         }
 
-        # Act
         print(f"Testing password validation with: {password}, expected valid: {is_valid}")
         response = await client.post("/auth/register", json=user_data)
         print(f"Response status: {response.status_code}")
 
-        # Assert
         if is_valid:
             # For valid passwords, we should get either:
             # - 201 Created (user created)
@@ -75,17 +72,15 @@ class TestAuthSecurity:
         ]
 
         for username in test_usernames:
-            # Arrange
             user_data = {
                 "username": username,
                 "email": f"injection{random.randint(1000, 9999)}@test.com",
                 "password": "ValidPassword123!"
             }
 
-            # Act
             response = await client.post("/auth/register", json=user_data)
 
-            # Assert - we don't necessarily expect success due to username validation,
+            # we don't necessarily expect success due to username validation,
             # but we should never have a 500 server error (which would indicate SQL injection)
             assert response.status_code != 500, f"Server error with username: {username}"
 
@@ -102,39 +97,37 @@ class TestAuthSecurity:
         ]
 
         for email in test_emails:
-            # Arrange
             user_data = {
                 "username": f"security_test_{random.randint(1000, 9999)}",
                 "email": email,
                 "password": "ValidPassword123!"
             }
 
-            # Act
             response = await client.post("/auth/register", json=user_data)
 
-            # Assert - should never have a 500 error
+            # should never have a 500 error
             assert response.status_code != 500, f"Server error with email: {email}"
 
     async def test_token_validation(self, client):
         """Test that invalid tokens are properly rejected"""
-        # Arrange - create a random invalid token
+        # create a random invalid token
         invalid_token = "".join(random.choices(
             string.ascii_letters + string.digits, k=50
         ))
 
-        # Act - attempt to access a protected route
+        # attempt to access a protected route
         response = await client.get(
             "/auth/me",
             headers={"Authorization": f"Bearer {invalid_token}"}
         )
 
-        # Assert - should get an error response
+        # should get an error response
         assert response.status_code in [401, 403, 404, 422], \
             f"Expected authentication error, got status {response.status_code}"
 
     async def test_expired_token_validation(self, authenticated_client):
         """Test that expired tokens are properly rejected"""
-        # Arrange - modify the token to have an expired timestamp
+        # modify the token to have an expired timestamp
         # This is a simplistic test - in a real scenario, you'd want to
         # manipulate the JWT expiration time
 
@@ -151,7 +144,7 @@ class TestAuthSecurity:
                 modified_token[middle + i] = random.choice(string.ascii_letters)
         modified_token = "".join(modified_token)
 
-        # Act - try to access a protected route with the modified token
+        # try to access a protected route with the modified token
         try:
             # Use the authenticated_client with modified headers
             headers = authenticated_client.headers.copy()
@@ -161,7 +154,6 @@ class TestAuthSecurity:
                 test_client.headers = headers
                 response = await test_client.get("/auth/me")
 
-            # Assert
             assert response.status_code in [401, 403, 422], \
                 f"Expected authentication error, got status {response.status_code}"
         except Exception as e:
@@ -187,7 +179,6 @@ class TestXSSProtection:
     )
     async def test_poll_title_xss(self, authenticated_client, xss_input):
         """Test that poll titles are protected against XSS attacks"""
-        # Arrange
         poll_data = {
             "title": xss_input,
             "description": "Security test poll",
@@ -196,10 +187,9 @@ class TestXSSProtection:
             "end_date": "2099-12-31T23:59:59"
         }
 
-        # Act
         response = await authenticated_client.post("/polls/", json=poll_data)
 
-        # Assert - Either the request fails with validation error or succeeds with escaped content
+        # Either the request fails with validation error or succeeds with escaped content
         if response.status_code == 201:
             # If the request succeeded, ensure the response doesn't contain unescaped XSS payload
             response_data = response.json()
@@ -232,7 +222,6 @@ class TestXSSProtection:
     )
     async def test_poll_option_xss(self, authenticated_client, xss_input):
         """Test that poll options are protected against XSS attacks"""
-        # Arrange
         poll_data = {
             "title": "Security Test Poll",
             "description": "Security test description",
@@ -241,10 +230,9 @@ class TestXSSProtection:
             "end_date": "2099-12-31T23:59:59"
         }
 
-        # Act
         response = await authenticated_client.post("/polls/", json=poll_data)
 
-        # Assert - Either the request fails with validation error or succeeds with escaped content
+        # Either the request fails with validation error or succeeds with escaped content
         if response.status_code == 201:
             # If the request succeeded, check that the option doesn't contain unescaped XSS payload
             response_data = response.json()
@@ -285,10 +273,9 @@ class TestSQLInjection:
     )
     async def test_poll_id_sql_injection(self, authenticated_client, sql_injection):
         """Test that poll ID parameter is protected against SQL injection"""
-        # Act
         response = await authenticated_client.get(f"/polls/{sql_injection}")
 
-        # Assert - We expect 404 or 422, but never 500 (server error)
+        # We expect 404 or 422, but never 500 (server error)
         assert response.status_code in (404, 422), \
             f"Unexpected status code {response.status_code} for input: {sql_injection}"
 
@@ -302,20 +289,18 @@ class TestSQLInjection:
     )
     async def test_username_sql_injection(self, client, sql_injection):
         """Test that username parameter is protected against SQL injection during login"""
-        # Arrange
         login_data = {
             "username": sql_injection,
             "password": "ValidPassword123!"
         }
 
-        # Act
         response = await client.post(
             "/auth/login",
             data=login_data,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
 
-        # Assert - We expect 401, but never 500 (server error)
+        # We expect 401, but never 500 (server error)
         assert response.status_code != 500, \
             f"Server error with SQL injection in username: {sql_injection}"
 
@@ -325,7 +310,7 @@ class TestAccessControl:
 
     async def test_update_other_users_poll(self, authenticated_client, client):
         """Test that users cannot update polls created by other users"""
-        # Arrange - create a poll with the first user
+        # create a poll with the first user
         poll_data = {
             "title": "Access Control Test Poll",
             "description": "Testing access control",
@@ -388,7 +373,7 @@ class TestAccessControl:
         if not token:
             pytest.skip("Could not obtain access token for second user")
 
-        # Act - try to update the poll created by the first user
+        # try to update the poll created by the first user
         update_data = {
             "title": "Updated by unauthorized user",
             "description": "This should not work"
@@ -406,7 +391,7 @@ class TestAccessControl:
 
     async def test_close_other_users_poll(self, authenticated_client, client):
         """Test that users cannot close polls created by other users"""
-        # Arrange - create a poll with the first user
+        # create a poll with the first user
         poll_data = {
             "title": "Access Control Test Poll for Closing",
             "description": "Testing access control for closing",
@@ -469,12 +454,11 @@ class TestAccessControl:
         if not token:
             pytest.skip("Could not obtain access token for second user")
 
-        # Act - try to close the poll created by the first user
+        # try to close the poll created by the first user
         response = await client.post(
             f"/polls/{poll_id}/close",
             headers={"Authorization": f"Bearer {token}"}
         )
 
-        # Assert
         assert response.status_code in (403, 404), \
             "Second user should not be able to close first user's poll"

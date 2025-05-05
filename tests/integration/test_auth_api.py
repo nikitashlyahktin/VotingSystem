@@ -21,11 +21,11 @@ class TestAuthAPI:
         # Act
         response = await client.post("/auth/register", json=user_data)
 
-        # Assert - принимаем как 201 (первый запуск), так и 400 (повторный запуск)
+        # Assert - 201 (first run), 400 (duplicate run)
         assert response.status_code in (201, 400)
 
         if response.status_code == 400:
-            # Проверка сообщения об ошибке для дублирующегося пользователя
+            # Check error message for duplicate user
             error_msg = response.json()["detail"].lower()
             assert "username already taken" in error_msg or "email already registered" in error_msg
 
@@ -49,13 +49,11 @@ class TestAuthAPI:
         }
         response = await client.post("/auth/register", json=duplicate_data)
 
-        # Assert
         assert response.status_code == 400
         assert "username already taken" in response.json()["detail"].lower()
 
     async def test_register_duplicate_email(self, client):
         """Test registration with duplicate email"""
-        # Arrange
         user_data = {
             "username": "emailuser1",
             "email": "same_email@example.com",
@@ -73,7 +71,6 @@ class TestAuthAPI:
         }
         response = await client.post("/auth/register", json=duplicate_data)
 
-        # Assert
         assert response.status_code == 400
         assert "email already registered" in response.json()["detail"].lower()
 
@@ -89,22 +86,18 @@ class TestAuthAPI:
         # Act
         response = await client.post("/auth/register", json=invalid_email_data)
 
-        # Assert
         assert response.status_code == 422  # Validation error
 
     async def test_register_password_too_short(self, client):
         """Test registration with password that's too short"""
-        # Arrange
         short_password_data = {
             "username": "shortpassword",
             "email": "short@example.com",
             "password": "short"  # Too short password
         }
 
-        # Act
         response = await client.post("/auth/register", json=short_password_data)
 
-        # Assert
         assert response.status_code == 422  # Validation error
 
     async def test_register_invalid_password(self, client):
@@ -213,7 +206,6 @@ class TestAuthAPI:
 
         response = await client.post("/auth/login", data=login_data, headers=headers)
 
-        # Assert
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -242,13 +234,10 @@ class TestAuthAPI:
 
         response = await client.post("/auth/login", data=login_data, headers=headers)
 
-        # Assert - Different APIs might handle this differently
         if response.status_code == 200:
-            # If username login is supported
             data = response.json()
             assert "access_token" in data
         else:
-            # If only email login is supported
             assert response.status_code == 401
 
     async def test_login_invalid_credentials(self, client):
@@ -274,7 +263,6 @@ class TestAuthAPI:
 
         response = await client.post("/auth/login", data=login_data, headers=headers)
 
-        # Assert
         assert response.status_code == 401
         assert "incorrect" in response.json()["detail"].lower()
 
@@ -325,7 +313,6 @@ class TestAuthAPI:
 
         response = await client.post("/auth/login", data=login_data, headers=headers)
 
-        # Assert
         assert response.status_code == 401
         assert "incorrect" in response.json()["detail"].lower()
 
@@ -377,7 +364,6 @@ class TestAuthAPI:
 
             refresh_response = await client.post("/auth/refresh", json=refresh_data)
 
-            # If the endpoint exists and works
             if refresh_response.status_code == 200:
                 new_token_data = refresh_response.json()
                 assert "access_token" in new_token_data
@@ -388,7 +374,6 @@ class TestAuthAPI:
         # Attempt to logout
         response = await authenticated_client.post("/auth/logout")
 
-        # If logout endpoint exists
         if response.status_code == 200:
             # Verify token has been invalidated by trying to access protected endpoint
             me_response = await authenticated_client.get("/users/me")
@@ -396,10 +381,8 @@ class TestAuthAPI:
 
     async def test_get_user_profile(self, authenticated_client):
         """Test getting authenticated user profile"""
-        # Act
         response = await authenticated_client.get("/users/me")
 
-        # Assert
         assert response.status_code == 200
         user_data = response.json()
         assert user_data["username"] == "testuser"
@@ -414,7 +397,6 @@ class TestAuthAPI:
         # Act - Try to access protected endpoint without auth
         response = await client.get("/users/me")
 
-        # Assert
         assert response.status_code == 401
         assert "not authenticated" in response.json()["detail"].lower()
 
@@ -448,7 +430,6 @@ class TestAuthAPI:
         client.headers.update({"Authorization": "Bearer invalid_token"})
         response = await client.get("/users/me")
 
-        # Assert
         assert response.status_code == 401
         assert "could not validate" in response.json()["detail"].lower()
 
@@ -459,7 +440,6 @@ class TestAuthAPI:
             {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"})
         response = await client.get("/users/me")
 
-        # Assert
         assert response.status_code == 401
 
     async def test_malformed_token(self, client):
@@ -527,20 +507,17 @@ class TestAuthAPI:
                        return_value="mocked_token"):
                 result = await login(form_data, db)
 
-                # Verify the result
                 assert result["access_token"] == "mocked_token"
                 assert result["token_type"] == "bearer"
 
     @pytest.mark.asyncio
     async def test_auth_router_invalid_credentials(self):
         """Test the auth router login function with invalid credentials"""
-        # Mock the database and form data
         db = MagicMock()
         form_data = MagicMock()
         form_data.username = "test@example.com"
         form_data.password = "WrongPassword"
 
-        # Mock user
         user = MagicMock()
         user.email = "test@example.com"
         user.hashed_password = "hashed_password"
@@ -550,17 +527,14 @@ class TestAuthAPI:
 
         # Mock verify_password to return False (wrong password)
         with patch('backend.app.application.routers.auth.verify_password', return_value=False):
-            # Call should raise HTTPException
             with pytest.raises(Exception) as exc_info:
                 await login(form_data, db)
 
-            # Verify the exception
             assert "401" in str(exc_info.value) or "unauthorized" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
     async def test_auth_router_user_not_found(self):
         """Test the auth router login function with non-existent user"""
-        # Mock the database and form data
         db = MagicMock()
         form_data = MagicMock()
         form_data.username = "nonexistent@example.com"
@@ -573,16 +547,13 @@ class TestAuthAPI:
         with pytest.raises(Exception) as exc_info:
             await login(form_data, db)
 
-        # Verify the exception
         assert "401" in str(exc_info.value) or "unauthorized" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
     async def test_auth_router_register_success(self):
         """Test the auth router register function successfully"""
-        # Mock the database
         db = MagicMock()
 
-        # Mock UserCreate schema
         user_data = MagicMock()
         user_data.email = "newregister@example.com"
         user_data.username = "newregister"
@@ -594,10 +565,8 @@ class TestAuthAPI:
         # Mock password hashing
         with patch('backend.app.application.routers.auth.get_password_hash',
                    return_value="hashed_password"):
-            # Call register function
             await register(user_data, db)
 
-            # Verify db operations were called
             assert db.add.called
             assert db.commit.called
             assert db.refresh.called

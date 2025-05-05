@@ -102,7 +102,6 @@ class VotingSystemUser(HttpUser):
                     self.access_token = data.get("access_token")
                     if self.access_token:
                         print(f"Form login successful: {self.access_token[:10]}...")
-                        # Try to get user ID
                         self.get_user_id()
                         return True
                     else:
@@ -119,7 +118,6 @@ class VotingSystemUser(HttpUser):
         if self.debug:
             print(f"Trying JSON login for {self.username}")
             
-        # Try both username and email in separate attempts
         json_data_attempts = [
             {"username": self.username, "password": self.password},
             {"username": self.email, "password": self.password},
@@ -139,7 +137,6 @@ class VotingSystemUser(HttpUser):
                         self.access_token = data.get("access_token")
                         if self.access_token:
                             print(f"JSON login successful: {self.access_token[:10]}...")
-                            # Try to get user ID
                             self.get_user_id()
                             return True
                         else:
@@ -172,7 +169,6 @@ class VotingSystemUser(HttpUser):
                     self.access_token = data.get("access_token")
                     if self.access_token:
                         print(f"Basic Auth login successful: {self.access_token[:10]}...")
-                        # Try to get user ID
                         self.get_user_id()
                         return True
                     else:
@@ -551,7 +547,6 @@ class VotingSystemUser(HttpUser):
             if not self.access_token:
                 return
                 
-        # Try multiple endpoints for user profile
         endpoints = ["/users/me", "/auth/me", "/profile", "/user/profile"]
         
         for endpoint in endpoints:
