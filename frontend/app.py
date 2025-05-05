@@ -1,9 +1,8 @@
-import random
+import time
 
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
-import json
 
 # API configuration
 API_URL = "http://127.0.0.1:8000"
@@ -18,12 +17,12 @@ def init_session_state():
         st.session_state.token = None
     if "user" not in st.session_state:
         st.session_state.user = None
+    if not st.session_state.token:
+        st.session_state.num_options = 2
 
 
 def login(email: str, password: str) -> bool:
     try:
-        # Log the request details
-        st.write("Sending login request to:", f"{API_URL}/auth/login")
 
         # Create the request data
         request_data = {
@@ -31,19 +30,8 @@ def login(email: str, password: str) -> bool:
             "password": password
         }
 
-        # Log the request data (without password)
-        st.write("Request data:", json.dumps({"username": email, "password": "***"}, indent=2))
-
         # Try to make the request
         try:
-            # First try a simple GET request to check if the server is accessible
-            test_response = session.get(
-                f"{API_URL}/",
-                timeout=5,
-                proxies={'http': None, 'https': None}
-            )
-            st.write("Test connection response:", test_response.status_code)
-
             # Then make the login request
             response = session.post(
                 f"{API_URL}/auth/login",  # Updated endpoint
@@ -63,9 +51,6 @@ def login(email: str, password: str) -> bool:
             return False
 
         # Print detailed response information
-        st.write("Response status code:", response.status_code)
-        st.write("Response headers:", dict(response.headers))
-        st.write("Response content:", response.text)
 
         if response.status_code == 200:
             data = response.json()
@@ -108,9 +93,6 @@ def register(email: str, username: str, password: str) -> bool:
             st.error("Password must be at least 8 characters")
             return False
 
-        # Log the request details
-        st.write("Sending registration request to:", f"{API_URL}/auth/register")
-
         # Create the request data with proper JSON formatting
         request_data = {
             "email": email,
@@ -118,19 +100,8 @@ def register(email: str, username: str, password: str) -> bool:
             "password": password
         }
 
-        # Log the request data
-        st.write("Request data:", json.dumps(request_data, indent=2))
-
         # Try to make the request
         try:
-            # First try a simple GET request to check if the server is accessible
-            test_response = session.get(
-                f"{API_URL}/",
-                timeout=5,
-                proxies={'http': None, 'https': None}
-            )
-            st.write("Test connection response:", test_response.status_code)
-
             # Then make the registration request
             response = session.post(
                 f"{API_URL}/auth/register",
@@ -146,13 +117,9 @@ def register(email: str, username: str, password: str) -> bool:
             st.error(f"Request failed: {str(e)}")
             return False
 
-        # Print detailed response information
-        st.write("Response status code:", response.status_code)
-        st.write("Response headers:", dict(response.headers))
-        st.write("Response content:", response.text)
-
         if response.status_code == 201:
             st.success("Registration successful! Please login.")
+            time.sleep(3)
             return True
         else:
             try:
@@ -168,8 +135,6 @@ def register(email: str, username: str, password: str) -> bool:
 
 def create_poll(title: str, description: str, options: list, is_multiple_choice: bool, closing_date: datetime = None):
     try:
-        # Log the request details
-        st.write("Sending poll creation request to:", f"{API_URL}/polls/")
 
         # Create the request data
         data = {
@@ -179,9 +144,6 @@ def create_poll(title: str, description: str, options: list, is_multiple_choice:
             "is_multiple_choice": is_multiple_choice,
             "closing_date": closing_date.isoformat() if closing_date else None
         }
-
-        # Log the request data
-        st.write("Request data:", json.dumps(data, indent=2))
 
         # Make the request
         headers = {
@@ -199,18 +161,13 @@ def create_poll(title: str, description: str, options: list, is_multiple_choice:
                 proxies={'http': None, 'https': None}
             )
 
-            # Print detailed response information
-            st.write("Response status code:", response.status_code)
-            st.write("Response headers:", dict(response.headers))
-            st.write("Response content:", response.text)
-
             if response.status_code == 201:
-                st.success("Poll created successfully!")
+                st.success("Poll created successfully! Refreshing the page...")
                 return True
             else:
                 try:
-                    error_detail = response.json().get("detail", "Unknown error")
-                    st.error(f"Failed to create poll: {error_detail}")
+                    error_detail = response.json().get("detail")[0]['msg']
+                    st.error(error_detail)
                 except ValueError:
                     st.error(f"Failed to create poll with status code: {response.status_code}")
                 return False
@@ -225,9 +182,87 @@ def create_poll(title: str, description: str, options: list, is_multiple_choice:
         return False
 
 
-def vote_in_poll(poll_id: int, option_ids: list):
+def close_poll(poll_id: int):
     try:
 
+        # Create the request data
+        data = {
+            "poll_id": poll_id
+        }
+
+        # Make the request
+        headers = {
+            "Authorization": f"Bearer {st.session_state.token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+        try:
+            response = session.post(
+                f"{API_URL}/polls/{poll_id}/close",
+                json=data,
+                headers=headers,
+                timeout=5,
+                proxies={'http': None, 'https': None}
+            )
+
+            if response.status_code == 200:
+                st.success("Poll closed successfully! Refreshing the page...")
+                return True
+            else:
+                try:
+                    st.error(response.json())
+                    error_detail = response.json().get("detail")[0]['msg']
+                    st.error(error_detail)
+                except ValueError:
+                    st.error(f"Failed to close the poll with status code: {response.status_code}")
+                return False
+        except requests.exceptions.Timeout:
+            st.error("Request timed out. The server might be down or not responding.")
+            return False
+        except requests.exceptions.RequestException as e:
+            st.error(f"Request failed: {str(e)}")
+            return False
+    except Exception as e:
+        st.error(f"Error closing poll: {str(e)}")
+        return False
+
+
+def get_my_id():
+    try:
+        # Make the request
+        headers = {
+            "Authorization": f"Bearer {st.session_state.token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+        try:
+            response = session.get(
+                f"{API_URL}/users/me",
+                headers=headers,
+                timeout=5,
+                proxies={'http': None, 'https': None}
+            )
+
+            if response.status_code == 200:
+                return response.json().get('id')
+            else:
+                st.error(f"Getting information about the current user error: {response.status_code}")
+                return False
+        except requests.exceptions.Timeout:
+            st.error("Request timed out. The server might be down or not responding.")
+            return False
+        except requests.exceptions.RequestException as e:
+            st.error(f"Request failed: {str(e)}")
+            return False
+    except Exception as e:
+        st.error(f"Error closing poll: {str(e)}")
+        return False
+
+
+def vote_in_poll(poll_id: int, option_ids: list):
+    try:
         # Create the request data
         data = {
             "poll_id": poll_id,
@@ -277,6 +312,9 @@ def vote_in_poll(poll_id: int, option_ids: list):
 
 def get_polls():
     try:
+        data = {
+            "limit": 1_000_000
+        }
         # Make the request
         headers = {
             "Authorization": f"Bearer {st.session_state.token}",
@@ -286,6 +324,7 @@ def get_polls():
         try:
             response = session.get(
                 f"{API_URL}/polls/",
+                params=data,
                 headers=headers,
                 timeout=5,
                 proxies={'http': None, 'https': None}
@@ -403,20 +442,24 @@ def main():
                                 )
                                 selected_ids = [opt[0] for opt in selected_options]
                             else:
-                                key = random.choice(range(1, 100_000_000))
                                 option = st.selectbox(
                                     "Choose an option:",
                                     options=[(opt['id'], opt['text']) for opt in options],
                                     format_func=lambda x: x[1],
-                                    key=key
+                                    key=poll['id']
                                 )
                                 selected_ids = [option[0]] if option else []
 
-                            if st.button("Vote", key=f"vote_{poll['id']}"):
+                            if st.button("Vote", key=f"vote_{poll['id']}", type='secondary'):
                                 if selected_ids:
                                     vote_in_poll(poll['id'], selected_ids)
                                 else:
                                     st.warning("Please select at least one option")
+                            if get_my_id() == poll['creator_id']:
+                                if st.button('Close poll', key=f'close_poll_{poll["id"]}', type='primary'):
+                                    close_poll(poll['id'])
+                                    time.sleep(3)
+                                    st.rerun()
                         else:
                             st.warning("This poll is closed")
             else:
@@ -429,10 +472,13 @@ def main():
             is_multiple_choice = st.checkbox("Allow Multiple Choices")
 
             options = []
-            for i in range(10):  # Maximum 10 options
+            for i in range(st.session_state.num_options):
                 option = st.text_input(f"Option {i + 1}", key=f"option_{i}")
                 if option:
                     options.append(option)
+            if st.button('➕ Add Option'):
+                st.session_state.num_options += 1
+                st.rerun()
 
             use_closing_date = st.checkbox("Set Closing Date")
             closing_date = None
@@ -442,7 +488,7 @@ def main():
                     min_value=datetime.now().date(),
                     value=datetime.now().date() + timedelta(days=1)
                 )
-                closing_time = st.time_input("Closing Time", value=datetime.now().time())
+                closing_time = st.time_input("Closing Time", value=datetime.now())
                 if closing_date and closing_time:
                     closing_date = datetime.combine(closing_date, closing_time)
 
@@ -450,8 +496,11 @@ def main():
                 if len(options) < 2:
                     st.error("Please add at least 2 options")
                 else:
-                    create_poll(title, description, options, is_multiple_choice, closing_date)
-                    st.rerun()  # Refresh the page to show the new poll
+                    if create_poll(title, description, options, is_multiple_choice, closing_date):
+                        time.sleep(3)
+                        st.rerun()
+                    # else:
+                    # st.rerun()  # Refresh the page to show the new poll
 
         with tab3:
             st.subheader("Poll Results")
