@@ -348,7 +348,14 @@ class VotingSystemUser(HttpUser):
         if not open_polls:
             return
 
-        poll = random.choice(open_polls)
+        # Filter for polls that have options
+        open_polls_with_options = [p for p in open_polls if p["options"] and len(p["options"]) > 0]
+        if not open_polls_with_options:
+            if self.debug:
+                print("No open polls with options available")
+            return
+
+        poll = random.choice(open_polls_with_options)
         poll_id = poll["id"]
 
         # Choose one or more options

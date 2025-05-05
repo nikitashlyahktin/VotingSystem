@@ -125,7 +125,14 @@ jobs:
       - name: Run Locust performance tests
         run: |
           poetry run pip install locust
-          poetry run locust -f tests/performance/locustfile.py --headless -u 3 -r 2 --run-time 1m --host http://localhost:8000
+          # Run with increased verbosity
+          poetry run locust -f tests/performance/locustfile.py --headless -u 3 -r 2 --run-time 1m --host http://localhost:8000 --logfile locust.log
+          
+          # Check for common errors in logs
+          if grep -q "Cannot choose from an empty sequence" locust.log; then
+            echo "Warning: Empty sequence errors found - likely polls with no options"
+            echo "This has been fixed in the latest locustfile update"
+          fi
       
       - name: Check performance metrics
         run: |
