@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Dict, Optional
 
 from backend.app.domain.repositories.vote_repository import VoteRepository
 from backend.app.domain.repositories.poll_repository import PollRepository

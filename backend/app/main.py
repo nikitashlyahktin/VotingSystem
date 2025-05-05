@@ -30,10 +30,11 @@ app.include_router(auth.router)  # Removed prefix since it's defined in the rout
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(polls.router, prefix="/polls", tags=["polls"])
 
+
 @app.get("/")
 async def root():
     return {
         "message": "Welcome to the Voting System API",
         "docs": "/docs",
         "redoc": "/redoc"
-    } 
+    }

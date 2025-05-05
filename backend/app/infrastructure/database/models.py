@@ -2,8 +2,10 @@ from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+
 class Base(DeclarativeBase):
     pass
+
 
 # Association table for user-poll votes (for multiple choice polls)
 poll_votes = Table(
@@ -15,6 +17,7 @@ poll_votes = Table(
     Column("created_at", DateTime, default=datetime.utcnow),
     Column("updated_at", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow),
 )
+
 
 class User(Base):
     __tablename__ = "users"
@@ -32,6 +35,7 @@ class User(Base):
     # Relationships
     created_polls = relationship("Poll", back_populates="creator")
     votes = relationship("PollOption", secondary=poll_votes, back_populates="voters")
+
 
 class Poll(Base):
     __tablename__ = "polls"
@@ -52,6 +56,7 @@ class Poll(Base):
     creator = relationship("User", back_populates="created_polls")
     options = relationship("PollOption", back_populates="poll", cascade="all, delete-orphan")
 
+
 class PollOption(Base):
     __tablename__ = "poll_options"
 
@@ -65,4 +70,4 @@ class PollOption(Base):
 
     # Relationships
     poll = relationship("Poll", back_populates="options")
-    voters = relationship("User", secondary=poll_votes, back_populates="votes") 
+    voters = relationship("User", secondary=poll_votes, back_populates="votes")

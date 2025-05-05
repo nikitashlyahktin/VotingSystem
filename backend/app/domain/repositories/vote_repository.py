@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict
+from typing import Optional, Dict
 
 from backend.app.domain.entities.vote import Vote
 
