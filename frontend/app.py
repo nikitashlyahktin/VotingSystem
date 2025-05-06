@@ -24,7 +24,6 @@ def init_session_state():
 
 def login(email: str, password: str) -> bool:
     """Authenticate user with provided credentials.
-    
     Returns True if login successful, False otherwise.
     """
     try:
@@ -86,7 +85,6 @@ def login(email: str, password: str) -> bool:
 
 def register(email: str, username: str, password: str) -> bool:
     """Register a new user account.
-    
     Returns True if registration successful, False otherwise.
     """
     try:
@@ -141,7 +139,6 @@ def register(email: str, username: str, password: str) -> bool:
 
 def create_poll(title: str, description: str, options: list, is_multiple_choice: bool, closing_date: datetime = None):
     """Create a new poll with the provided details.
-    
     Returns True if poll created successfully, False otherwise.
     """
     try:
@@ -193,7 +190,6 @@ def create_poll(title: str, description: str, options: list, is_multiple_choice:
 
 def close_poll(poll_id: int):
     """Close an active poll.
-    
     Returns True if poll closed successfully, False otherwise.
     """
     try:
@@ -242,7 +238,6 @@ def close_poll(poll_id: int):
 
 def get_my_id():
     """Get the current user's ID.
-    
     Returns user ID or False if request fails.
     """
     try:
@@ -278,7 +273,6 @@ def get_my_id():
 
 def vote_in_poll(poll_id: int, option_ids: list):
     """Submit a vote for selected option(s) in a poll.
-    
     Returns True if vote recorded successfully, False otherwise.
     """
     try:
@@ -327,7 +321,6 @@ def vote_in_poll(poll_id: int, option_ids: list):
 
 def get_polls():
     """Fetch all available polls.
-    
     Returns list of polls or empty list if request fails.
     """
     try:
@@ -371,7 +364,6 @@ def get_polls():
 
 def get_poll_results(poll_id: int):
     """Fetch results for a specific poll.
-    
     Returns poll results or None if request fails.
     """
     try:
