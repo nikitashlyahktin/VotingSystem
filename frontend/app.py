@@ -13,6 +13,7 @@ session.trust_env = False  # Disable proxy settings
 
 
 def init_session_state():
+    """Initialize Streamlit session state variables."""
     if "token" not in st.session_state:
         st.session_state.token = None
     if "user" not in st.session_state:
@@ -22,8 +23,11 @@ def init_session_state():
 
 
 def login(email: str, password: str) -> bool:
+    """Authenticate user with provided credentials.
+    
+    Returns True if login successful, False otherwise.
+    """
     try:
-
         # Create the request data
         request_data = {
             "username": email,
@@ -32,9 +36,9 @@ def login(email: str, password: str) -> bool:
 
         # Try to make the request
         try:
-            # Then make the login request
+            # Make the login request
             response = session.post(
-                f"{API_URL}/auth/login",  # Updated endpoint
+                f"{API_URL}/auth/login",
                 data=request_data,  # Using data instead of json for form data
                 headers={
                     "Content-Type": "application/x-www-form-urlencoded",
@@ -49,8 +53,6 @@ def login(email: str, password: str) -> bool:
         except requests.exceptions.RequestException as e:
             st.error(f"Request failed: {str(e)}")
             return False
-
-        # Print detailed response information
 
         if response.status_code == 200:
             data = response.json()
@@ -83,6 +85,10 @@ def login(email: str, password: str) -> bool:
 
 
 def register(email: str, username: str, password: str) -> bool:
+    """Register a new user account.
+    
+    Returns True if registration successful, False otherwise.
+    """
     try:
         # Validate input
         if len(username) < 3 or len(username) > 50:
@@ -102,7 +108,7 @@ def register(email: str, username: str, password: str) -> bool:
 
         # Try to make the request
         try:
-            # Then make the registration request
+            # Make the registration request
             response = session.post(
                 f"{API_URL}/auth/register",
                 json=request_data,
@@ -134,8 +140,11 @@ def register(email: str, username: str, password: str) -> bool:
 
 
 def create_poll(title: str, description: str, options: list, is_multiple_choice: bool, closing_date: datetime = None):
+    """Create a new poll with the provided details.
+    
+    Returns True if poll created successfully, False otherwise.
+    """
     try:
-
         # Create the request data
         data = {
             "title": title,
@@ -183,8 +192,11 @@ def create_poll(title: str, description: str, options: list, is_multiple_choice:
 
 
 def close_poll(poll_id: int):
+    """Close an active poll.
+    
+    Returns True if poll closed successfully, False otherwise.
+    """
     try:
-
         # Create the request data
         data = {
             "poll_id": poll_id
@@ -229,8 +241,11 @@ def close_poll(poll_id: int):
 
 
 def get_my_id():
+    """Get the current user's ID.
+    
+    Returns user ID or False if request fails.
+    """
     try:
-        # Make the request
         headers = {
             "Authorization": f"Bearer {st.session_state.token}",
             "Content-Type": "application/json",
@@ -262,14 +277,16 @@ def get_my_id():
 
 
 def vote_in_poll(poll_id: int, option_ids: list):
+    """Submit a vote for selected option(s) in a poll.
+    
+    Returns True if vote recorded successfully, False otherwise.
+    """
     try:
         # Create the request data
         data = {
             "poll_id": poll_id,
             "option_ids": option_ids
         }
-
-        # Log the request data
 
         # Make the request
         headers = {
@@ -286,8 +303,6 @@ def vote_in_poll(poll_id: int, option_ids: list):
                 timeout=5,
                 proxies={'http': None, 'https': None}
             )
-
-            # Print detailed response information
 
             if response.status_code == 200:
                 st.success("Vote recorded successfully!")
@@ -311,9 +326,13 @@ def vote_in_poll(poll_id: int, option_ids: list):
 
 
 def get_polls():
+    """Fetch all available polls.
+    
+    Returns list of polls or empty list if request fails.
+    """
     try:
         data = {
-            "limit": 1_000_000
+            "limit": 1_000_000  # Fetch a large number of polls
         }
         # Make the request
         headers = {
@@ -351,6 +370,10 @@ def get_polls():
 
 
 def get_poll_results(poll_id: int):
+    """Fetch results for a specific poll.
+    
+    Returns poll results or None if request fails.
+    """
     try:
         # Make the request
         headers = {
@@ -387,6 +410,7 @@ def get_poll_results(poll_id: int):
 
 
 def main():
+    """Main application function that sets up the Streamlit UI."""
     st.title("Voting System")
     init_session_state()
 
@@ -434,6 +458,7 @@ def main():
 
                         if poll['is_active']:
                             options = poll['options']
+                            # For multiple choice polls, use multiselect
                             if poll['is_multiple_choice']:
                                 selected_options = st.multiselect(
                                     "Choose options:",
@@ -441,6 +466,7 @@ def main():
                                     format_func=lambda x: x[1]
                                 )
                                 selected_ids = [opt[0] for opt in selected_options]
+                            # For single choice polls, use selectbox
                             else:
                                 option = st.selectbox(
                                     "Choose an option:",
@@ -455,6 +481,7 @@ def main():
                                     vote_in_poll(poll['id'], selected_ids)
                                 else:
                                     st.warning("Please select at least one option")
+                            # Only poll creator can close the poll
                             if get_my_id() == poll['creator_id']:
                                 if st.button('Close poll', key=f'close_poll_{poll["id"]}', type='primary'):
                                     close_poll(poll['id'])
@@ -471,6 +498,7 @@ def main():
             description = st.text_area("Poll Description")
             is_multiple_choice = st.checkbox("Allow Multiple Choices")
 
+            # Dynamic poll options
             options = []
             for i in range(st.session_state.num_options):
                 option = st.text_input(f"Option {i + 1}", key=f"option_{i}")
@@ -480,6 +508,7 @@ def main():
                 st.session_state.num_options += 1
                 st.rerun()
 
+            # Optional closing date setup
             use_closing_date = st.checkbox("Set Closing Date")
             closing_date = None
             if use_closing_date:
@@ -499,8 +528,6 @@ def main():
                     if create_poll(title, description, options, is_multiple_choice, closing_date):
                         time.sleep(3)
                         st.rerun()
-                    # else:
-                    # st.rerun()  # Refresh the page to show the new poll
 
         with tab3:
             st.subheader("Poll Results")
@@ -518,7 +545,7 @@ def main():
                         st.write("### Results")
                         total_votes = results['total_votes']
                         if total_votes > 0:
-                            # Get the poll to access option texts
+                            # Display results with progress bars
                             poll = next((p for p in polls if p['id'] == poll_id), None)
                             if poll:
                                 for option in poll['options']:
