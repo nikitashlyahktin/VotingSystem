@@ -16,12 +16,12 @@ The Voting System is a full-stack web application for creating and managing poll
 - **Static Analysis**: 
   - Flake8 is configured in pyproject.toml and integrated into the development workflow.
   - Code follows PEP8 standards with ≥95% compliance.
-  - Black is included as a development dependency for consistent code formatting.
+  - Bandit is used for vulnerability checks. 
   
 #### Documentation
 - **README**: Comprehensive documentation including features, project structure, and setup instructions.
 - **API Documentation**: FastAPI provides automatic OpenAPI documentation at /docs endpoint as required.
-- **Interface Documentation**: All interfaces are properly documented using type hints and docstrings.
+- **Interface Documentation**: All interfaces are properly documented.
 
 #### Maintainability Metrics
 - **Maintainability Index**: ≥80 (on a scale of 0-100)
@@ -76,7 +76,7 @@ The Voting System is a full-stack web application for creating and managing poll
 
 ### Quality Gates
 Enforced quality gates in the CI pipeline include:
-- Minimum 60% test coverage verification
+- Minimum 80% test coverage verification
 - No Flake8 warnings allowed
 - No critical security vulnerabilities from Bandit scans
 - Performance benchmarks must be met
@@ -93,19 +93,11 @@ The project fully adheres to the required technical stack:
 
 ## Team Contributions
 
-Each team member has successfully contributed at least one distinct feature to the project:
-1. Authentication system with JWT and bcrypt
-2. Poll creation and management functionality
-3. Voting mechanism with real-time updates
-4. Results visualization and reporting
-5. Administration interface for system management
+Each team member has successfully contributed to the project:
+1. **Backend Developer (Karim, Niyaz, Nikita)** - Implemented the complete server-side functionality including authentication system with JWT and bcrypt, core poll management, voting logic, database schema design, and API endpoints
+2. **DevOps Engineer (Adel)** - Set up CI/CD pipelines, testing infrastructure, deployment automation, and quality monitoring tools
+3. **Frontend Developer (Kamil)** - Created the Streamlit user interface, dashboard visualizations, form validation, and API integration
 
 ## Conclusion
 
-The Voting System project meets or exceeds all required quality metrics. The implementation follows a clean architecture approach with proper separation of concerns, has robust testing with good coverage, and implements all required security measures. The CI/CD pipeline effectively enforces quality gates, ensuring consistent quality throughout development.
-
-Moving forward, we recommend:
-1. Further improving test coverage to reach 90%
-2. Implementing performance monitoring in production
-3. Adding mutation testing for more robust test quality assessment
-4. Implementing UI testing with Selenium for the Streamlit frontend 
+The project meets or exceeds all required quality metrics. The implementation follows a clean architecture approach with proper separation of concerns, has robust testing with good coverage, and implements all required security measures. The CI/CD pipeline effectively enforces quality gates, ensuring consistent quality throughout development.
